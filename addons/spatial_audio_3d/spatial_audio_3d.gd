@@ -34,7 +34,7 @@ class_name SpatialAudio3D extends AudioStreamPlayer3D
 @export_range(0, 100, 0.1, "or_greater", "suffix:m") var bass_proximity: int = 50 ## The closer you are to a wall, the more bass you will hear.[br][br]The effect starts at this value (distance to the wall).[br][br]0 to disable.
 
 @export_category("Physics")
-@export_range(1, 100, 1, "or_greater", "suffix:m") var max_raycast_distance: int = 100 ## Maximum distance for the reverb raycasts.
+@export_range(1, 100, 1, "or_greater", "suffix:m") var max_raycast_distance: float = 100.0 ## Maximum distance for the reverb raycasts.
 @export_flags_3d_physics var collision_mask: int = 1 ## Mask for the raycast where to add reverb.
 @export var roomsize_multiplicator: float = 6.0 ## How much hall to add compared to room size.[br]Sometimes you have a small room but you need a long reverb.
 @export_range(1, 340, 1, "or_greater", "suffix:m/s") var speed_of_sound: int = 340 ## How fast sound travels through the air.
@@ -75,7 +75,7 @@ var xfadetime: float = 1.000
 enum fx {delay, reverb, reverb_hipass, lowpass}
 
 
-func _ready():
+func _ready() -> void:
 	# add soundsource
 	soundsource = Soundsource.new() # @export variables are overridden on _init, so we pass them right after to have the actual values
 
@@ -117,9 +117,9 @@ func _ready():
 		soundsource.do_play()
 
 
-func _physics_process(_delta):
+func _physics_process(_delta : float) -> void:
 	# keep rotation locked
-	global_rotation = Vector3(0, 0, 0)
+	global_rotation = Vector3.ZERO
 
 	if _tick_counter >= tick_interval:
 		soundsource.update_run()
@@ -129,20 +129,20 @@ func _physics_process(_delta):
 	_tick_counter += 1
 
 
-func do_play():
+func do_play() -> void:
 	soundsource.do_play()
 
 
-func do_stop():
+func do_stop() -> void:
 	soundsource.do_stop()
 
 
-func do_set_stream(sound: AudioStream):
+func do_set_stream(sound: AudioStream) -> void:
 	soundsource.do_set_stream(sound)
 
 
-func create_raycast(name_p, target_position) -> RayCast3D:
-	var r = RayCast3D.new()
+func create_raycast(name_p : String, target_position : Vector3) -> RayCast3D:
+	var r : RayCast3D = RayCast3D.new()
 	r.name = name_p
 	r.target_position = target_position
 	r.collision_mask = collision_mask
@@ -152,12 +152,12 @@ func create_raycast(name_p, target_position) -> RayCast3D:
 
 func create_raycast_sector(start_angle: int = 0, width_factor: float = 1.5, bearing_raycount: int = 20, heading_count: int = 7) -> Array[RayCast3D]:
 	var rays: Array[RayCast3D] = []
-	var i = 0
+	var i : int = 0
 	for heading: float in range(0, heading_count, 1): # 0: ground, 7: above
 		heading = heading/PI
 		for bearing: float in range((bearing_raycount/2.0 * -1), (bearing_raycount/2.0)): # -7: right, 7: left
 			bearing = bearing / bearing_raycount * width_factor
-			var mr = RayCast3D.new()
+			var mr : RayCast3D = RayCast3D.new()
 			mr.name = "mray" + str(i)
 			add_child(mr)
 			mr.target_position = Vector3(max_raycast_distance, 0, 0)
@@ -168,7 +168,7 @@ func create_raycast_sector(start_angle: int = 0, width_factor: float = 1.5, bear
 			mr.enabled = false
 
 			if debug:
-				var dray = Debugray.new()
+				var dray : Debugray = Debugray.new()
 				dray.visibility_range_end = max_raycast_distance
 				dray.visibility_range_end_margin = max_raycast_distance / 10.0
 				dray.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
@@ -180,7 +180,7 @@ func create_raycast_sector(start_angle: int = 0, width_factor: float = 1.5, bear
 
 
 func create_soundplayer(name_p: String, with_reverb_fx: bool = true) -> Soundplayer:
-	var soundplayer := Soundplayer.new()
+	var soundplayer : Soundplayer= Soundplayer.new()
 
 	# @export vars
 	soundplayer.loop = loop
@@ -214,30 +214,30 @@ func create_soundplayer(name_p: String, with_reverb_fx: bool = true) -> Soundpla
 	return soundplayer
 
 
-func create_audiobus(bus_name, vol_db = 0):
-	var a = AudioServer.bus_count
+func create_audiobus(bus_name : StringName, vol_db : float = 0.0) -> void:
+	var a : int = AudioServer.bus_count
 	AudioServer.add_bus(a)
 	AudioServer.set_bus_name(a, bus_name)
 	AudioServer.set_bus_volume_db(a, vol_db)
 	AudioServer.set_bus_send(a, "Master")
 
 
-func remove_audiobus(bus_name: String):
+func remove_audiobus(bus_name: String) -> void:
 	#print("removing bus ", bus_name)
-	var a = AudioServer.get_bus_index(bus_name)
+	var a : int = AudioServer.get_bus_index(bus_name)
 	AudioServer.remove_bus(a)
 
 
 ## sets the volume.
 ## if you provide fadetime, it will fade to volume using an internal tweener.
 ## if you need to fade more than one value at a time in this player, you can provide a tweener.
-func set_audiobus_volume(bus_name, vol_db, fadetime: float = 0, tweenvar: Tween = null):
+func set_audiobus_volume(bus_name : StringName, vol_db : float, fadetime: float = 0, tweenvar: Tween = null) -> void:
 	#if debug: print("set_audiobus_volume(%s, %f, %f)" % [bus_name, vol_db, fadetime])
-	var a = AudioServer.get_bus_index(bus_name)
+	var a : int = AudioServer.get_bus_index(bus_name)
 	if fadetime == 0:
 		AudioServer.set_bus_volume_db(a, vol_db)
 	else:
-		var current_volume = AudioServer.get_bus_volume_db(a)
+		var current_volume : float = AudioServer.get_bus_volume_db(a)
 		if tweenvar:
 			tweenvar.play()
 			tweenvar.tween_method(tweensetvol.bind(a), current_volume, vol_db, fadetime)
@@ -250,16 +250,16 @@ func set_audiobus_volume(bus_name, vol_db, fadetime: float = 0, tweenvar: Tween 
 # this is a little helper method for tweening.
 # tween_method always tweens the first value.
 # but the first value in set_bus_volume_db() is bus index, so we provide volume as the first value for tween_method.
-func tweensetvol(vol, bus_index):
+func tweensetvol(vol : float, bus_index : int) -> void:
 	AudioServer.set_bus_volume_db(bus_index, vol)
 
 
-func add_audioeffect(bus_name, effect_type: fx):
-	var a = AudioServer.get_bus_index(bus_name)
+func add_audioeffect(bus_name : StringName, effect_type: fx) -> void:
+	var a : int = AudioServer.get_bus_index(bus_name)
 	match effect_type:
 
 		fx.delay:
-			var delay = AudioEffectDelay.new()
+			var delay := AudioEffectDelay.new()
 			delay.dry = 0
 			delay.tap1_delay_ms = 0
 			delay.tap1_level_db = 0
@@ -268,7 +268,7 @@ func add_audioeffect(bus_name, effect_type: fx):
 			AudioServer.add_bus_effect(a, delay, 0)
 
 		fx.reverb:
-			var reverb = AudioEffectReverb.new()
+			var reverb := AudioEffectReverb.new()
 			reverb.dry = 0
 			reverb.spread = 0
 			reverb.hipass = 0.2
@@ -278,32 +278,32 @@ func add_audioeffect(bus_name, effect_type: fx):
 			AudioServer.add_bus_effect(a, reverb, 1)
 
 		fx.lowpass:
-			var lowpass = AudioEffectLowPassFilter.new()
+			var lowpass := AudioEffectLowPassFilter.new()
 			lowpass.cutoff_hz = 20500
 			AudioServer.add_bus_effect(a, lowpass, 2)
 
 
-func set_audioeffect(bus_name, effect_type: fx, params):
+func set_audioeffect(bus_name : StringName, effect_type: fx, params : Dictionary) -> void:
 	#if debug: print("set_audioeffect(%s, %s, %s)" % [bus_name, effect_type, JSON.stringify(params)])
-	var a = AudioServer.get_bus_index(bus_name)
+	var a : int = AudioServer.get_bus_index(bus_name)
 	match effect_type:
 
 		fx.delay:
-			var delay_fx = AudioServer.get_bus_effect(a, 0)
+			var delay_fx := AudioServer.get_bus_effect(a, 0)
 			delay_fx.tap1_delay_ms = params.delay
 
 		fx.reverb:
-			var reverb_fx = AudioServer.get_bus_effect(a, 1)
+			var reverb_fx := AudioServer.get_bus_effect(a, 1)
 			reverb_fx.room_size = params.room_size
 			reverb_fx.wet = params.wetness
 			reverb_fx.dry = 1 - params.wetness
 
 		fx.reverb_hipass:
-			var reverb_hipass_fx = AudioServer.get_bus_effect(a, 1)
+			var reverb_hipass_fx := AudioServer.get_bus_effect(a, 1)
 			reverb_hipass_fx.hipass = params.hipass
 
 		fx.lowpass:
-			var lowpass_fx = AudioServer.get_bus_effect(a, 2)
+			var lowpass_fx := AudioServer.get_bus_effect(a, 2)
 			if params.fadetime == 0:
 				lowpass_fx.cutoff_hz = params.lowpass
 			else:
@@ -322,8 +322,8 @@ func set_audioeffect(bus_name, effect_type: fx, params):
 					push_error("ERROR: fadetime not set in SpatialAudioStreamPlayer3D --> set_audioeffect --> fx.lowpass!")
 
 
-func toggle_audioeffect(bus_name, effect_type: fx, enabled):
-	var a = AudioServer.get_bus_index(bus_name)
+func toggle_audioeffect(bus_name : StringName, effect_type: fx, enabled : bool) -> void:
+	var a : int = AudioServer.get_bus_index(bus_name)
 	match effect_type:
 
 		fx.delay:
@@ -336,8 +336,8 @@ func toggle_audioeffect(bus_name, effect_type: fx, enabled):
 			AudioServer.set_bus_effect_enabled(a, 2, enabled)
 
 
-func calculate_delay(distance: float):
-	return round(distance / speed_of_sound * 1000)
+func calculate_delay(distance: float) -> float:
+	return roundf(distance / speed_of_sound * 1000.0)
 
 
 # Soundsource:
@@ -368,18 +368,18 @@ class Soundsource extends SpatialAudio3D:
 
 					soundplayer_active = _soundplayer_standby
 					soundplayer_standby = _soundplayer_active
-	var room_size = 0.0
-	var wetness = 1.0
+	var room_size : float = 0.0
+	var wetness : float = 1.0
 	var soundplayer_active: Soundplayer
 	var soundplayer_standby: Soundplayer
 	var _playing_since: int
 
 
-	func _ready():
+	func _ready() -> void:
 
 		if debug:
 			#print("spawning soundsource: ", name)
-			var ds = Debugsphere.new()
+			var ds : Debugsphere = Debugsphere.new()
 			ds.max_raycast_distance = max_raycast_distance
 			ds.size = 0.0
 			ds.label_offset = Vector3(0, 3, 0)
@@ -403,17 +403,17 @@ class Soundsource extends SpatialAudio3D:
 		if reverb_enabled:
 
 			# create raycasts
-			var raycast_index = 0
-			for c in raycasts_coords:
-				var rc = create_raycast("ray " + name + "#" + str(raycast_index), c)
+			var raycast_index : int = 0
+			for c : Vector3 in raycasts_coords:
+				var rc : RayCast3D = create_raycast("ray " + name + "#" + str(raycast_index), c)
 
-				var dray = Debugray.new()
+				var dray : Debugray = Debugray.new()
 				dray.visibility_range_end = max_raycast_distance * 1.3
 				dray.visibility_range_end_margin = max_raycast_distance / 10.0
 				dray.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 				rc.add_child(dray)
 
-				var dray_normal = Debugray.new()
+				var dray_normal : Debugray = Debugray.new()
 				rc.add_child(dray_normal)
 
 				add_child(rc)
@@ -421,7 +421,7 @@ class Soundsource extends SpatialAudio3D:
 
 			# create reverbers
 			raycast_index = 0
-			for rc in raycasts:
+			for rc : RayCast3D in raycasts:
 				var reverber = create_reverber(name, raycast_index)
 				get_tree().get_root().add_child.call_deferred(reverber)
 				reverbers.append(reverber)
@@ -429,25 +429,27 @@ class Soundsource extends SpatialAudio3D:
 
 			# create measurement rays
 			measurement_rays = create_raycast_sector(0, 2*PI, 12, 3)
-			for mr in measurement_rays:
+			for mr : RayCast3D in measurement_rays:
 				distances.append(-1)
 
 
-	func _physics_process(_delta):
+	func _physics_process(_delta : float) -> void:
 		if debug:
 			dump_debug()
 			debugsphere.update_label()
+			return
+		set_physics_process(false)
 
 
-	func _exit_tree():
-		for r in reverbers:
+	func _exit_tree() -> void:
+		for r : Reverber in reverbers:
 			r.queue_free()
-		for c in get_children():
+		for c : Node in get_children():
 			remove_child(c)
 
 
-	func create_reverber(name_p, raycast_index: int) -> Reverber:
-		var reverber := Reverber.new()
+	func create_reverber(name_p : String, raycast_index: int) -> Reverber:
+		var reverber : Reverber = Reverber.new()
 
 		# @export vars
 		reverber.loop = loop
@@ -478,20 +480,20 @@ class Soundsource extends SpatialAudio3D:
 		return reverber
 
 
-	func do_set_stream(s: AudioStream):
+	func do_set_stream(s: AudioStream) -> void:
 		stream = s
 
 		soundplayer_active.stream = s
 		soundplayer_standby.stream = s
 
 		if reverb_enabled:
-			for r in reverbers:
+			for r : Reverber in reverbers:
 				if r != null:
 					r.soundplayer_active.stream = s
 					r.soundplayer_standby.stream = s
 
 
-	func do_play():
+	func do_play() -> void:
 		if shut_up:
 			return
 
@@ -502,7 +504,7 @@ class Soundsource extends SpatialAudio3D:
 		_playing_since = Time.get_ticks_msec()
 
 		if reverb_enabled:
-			for r in reverbers:
+			for r : Reverber in reverbers:
 				r.do_play()
 
 		# start play on both
@@ -510,16 +512,16 @@ class Soundsource extends SpatialAudio3D:
 		soundplayer_standby.do_play()
 
 
-	func do_stop():
+	func do_stop() -> void:
 		if reverb_enabled:
-			for r in reverbers:
+			for r : Reverber in reverbers:
 				r.do_stop()
 
 		soundplayer_active.do_stop()
 		soundplayer_standby.do_stop()
 
 
-	func update_run():
+	func update_run() -> void:
 		distance_to_player = global_position.distance_to(player_camera.global_position)
 
 		# only update delay when moved >5m since last update
@@ -539,10 +541,10 @@ class Soundsource extends SpatialAudio3D:
 			calculate_reverb()
 
 
-	func calculate_all_distances():
-		var raycast_index = 0
-		for reverber in reverbers:
-			var rc := raycasts[raycast_index]
+	func calculate_all_distances() -> void:
+		var raycast_index : int = 0
+		for reverber : Reverber in reverbers:
+			var rc : RayCast3D = raycasts[raycast_index]
 			var target_position: Vector3
 			var colliding = false
 			var dray: Debugray = rc.get_child(0)
@@ -566,8 +568,8 @@ class Soundsource extends SpatialAudio3D:
 			raycast_index += 1
 
 		# measure room using measurement rays
-		var ri = 0
-		for mr in measurement_rays:
+		var ri : int = 0
+		for mr : RayCast3D in measurement_rays:
 			mr.force_raycast_update()
 			if mr.is_colliding():
 				distances[ri] = global_position.distance_to(mr.get_collision_point())
@@ -582,23 +584,23 @@ class Soundsource extends SpatialAudio3D:
 			ri += 1
 
 
-	func calculate_reverb():
+	func calculate_reverb() -> void:
 		# Find the reverb params
-		var _room_size = 0.0
-		var _wetness = 1.0
+		var _room_size : float = 0.0
+		var _wetness : float = 1.0
 
-		var total_rays = distances.size()
-		for distance in distances:
+		var total_rays : int = distances.size()
+		for distance : float in distances:
 			if distance >= 0:
 				# find the average room size based on the raycast distances that are valid
 				_room_size += (distance / (max_raycast_distance / roomsize_multiplicator)) / float(total_rays)
 				_room_size = snappedf(_room_size, 0.001)
-				_room_size = min(_room_size, 1.0)
+				_room_size = minf(_room_size, 1.0)
 			else:
 				# if a raycast did not hit anything we will reduce the reverb effect, almost no raycasts should hit when outdoors nowhere near buildings
 				_wetness -= 1.0 / float(distances.size())
 				_wetness = snappedf(_wetness, 0.001)
-				_wetness = max(_wetness, 0.0)
+				_wetness = maxf(_wetness, 0.0)
 
 		room_size = _room_size
 		wetness = _wetness
@@ -618,7 +620,7 @@ class Reverber extends SpatialAudio3D:
 	var soundplayer_active: Soundplayer
 	var soundplayer_standby: Soundplayer
 
-	func _ready():
+	func _ready() -> void:
 		name = name + "#" + str(raycast_index)
 
 		# create reverb-soundplayers for AB-reverb
@@ -628,37 +630,37 @@ class Reverber extends SpatialAudio3D:
 		get_tree().get_root().add_child(soundplayer_standby)
 
 
-	func _exit_tree():
+	func _exit_tree() -> void:
 		soundplayer_active.queue_free()
 		soundplayer_standby.queue_free()
 
 
 	# don't inherit this from SpatialAudio3D
-	func _physics_process(_delta):
-		pass
+	func _physics_process(_delta : float) -> void:
+		set_physics_process(false)
 
 
-	func do_play():
+	func do_play() -> void:
 		soundplayer_active.do_play()
 		soundplayer_standby.do_play()
 
 
-	func do_stop():
+	func do_stop() -> void:
 		soundplayer_active.do_stop()
 		soundplayer_standby.do_stop()
 
 
-	func update_position(target_position: Vector3, colliding: bool):
-		var _soundplayer_active := soundplayer_active
-		var _soundplayer_standby := soundplayer_standby
-		
-		var fadeintime = 1 * soundsource.wetness if reverb_fadeintime < 0 else reverb_fadeintime
-		var fadeouttime = 3 * soundsource.wetness if reverb_fadeouttime < 0 else reverb_fadeouttime
+	func update_position(target_position: Vector3, colliding: bool) -> void:
+		var _soundplayer_active : Soundplayer = soundplayer_active
+		var _soundplayer_standby : Soundplayer= soundplayer_standby
+
+		var fadeintime : float = 1.0 * soundsource.wetness if reverb_fadeintime < 0 else reverb_fadeintime
+		var fadeouttime : float = 3.0 * soundsource.wetness if reverb_fadeouttime < 0 else reverb_fadeouttime
 
 		# make sure inactive soundplayers stay silent
 		soundplayer_standby.set_inactive()
 
-		if global_position.distance_to(target_position) > 10:
+		if global_position.distance_to(target_position) > 10.0:
 			global_position = target_position
 
 			soundplayer_active.set_inactive(fadeouttime)
@@ -684,7 +686,7 @@ class Reverber extends SpatialAudio3D:
 # responsible for setup and teardown audio bus, volume, effect parameters and occlusion detection.
 class Soundplayer extends SpatialAudio3D:
 
-	var ds = {0: "active", 1: "inactive", 2: "fading_to_active", 3: "fading_to_inactive"}
+	var ds : Dictionary = {0: "active", 1: "inactive", 2: "fading_to_active", 3: "fading_to_inactive"}
 	enum ss {active, inactive, fading_to_active, fading_to_inactive}
 	var with_reverb_fx: bool
 	var state: ss:
@@ -741,10 +743,10 @@ class Soundplayer extends SpatialAudio3D:
 				if debug: debugsphere.line4 = "occluded" if v != 20500 else ""
 				set_audioeffect(audiobus_name, fx.lowpass, {"lowpass": lp_cutoff, "fadetime": occlusion_fadetime})
 	var occlusion_raycast: RayCast3D
-	var audiobus_name: String
+	var audiobus_name: StringName
 
 
-	func _ready():
+	func _ready() -> void:
 
 		if debug:
 			#print("spawning soundplayer: ", name)
@@ -768,7 +770,7 @@ class Soundplayer extends SpatialAudio3D:
 
 		# set initial state to inactive and mute
 		state = ss.inactive
-		set_audiobus_volume(audiobus_name, -80)
+		set_audiobus_volume(audiobus_name, -80.0)
 
 		# set volume according to AudioStreamPlayer3D param
 		proximity_volume = volume_db
@@ -784,34 +786,36 @@ class Soundplayer extends SpatialAudio3D:
 		finished.connect(_on_finished)
 
 
-	func _on_finished():
+	func _on_finished() -> void:
 		if loop:
 			soundsource.do_play()
 
 
-	func _physics_process(_delta):
+	func _physics_process(_delta : float) -> void:
 		if debug:
 			dump_debug()
 			debugsphere.update_label()
+			return
+		set_physics_process(false)
 
 
-	func _exit_tree():
-		for c in get_children():
+	func _exit_tree() -> void:
+		for c : Node in get_children():
 			remove_child(c)
 		remove_audiobus(audiobus_name)
 
 
-	func do_play():
+	func do_play() -> void:
 		#if debug: printerr(str(Time.get_ticks_msec()) + ": start playing on " + name + ", stream: " + str(stream))
 		play()
 
 
-	func do_stop():
+	func do_stop() -> void:
 		#if debug: printerr(str(Time.get_ticks_msec()) + ": stop playing on " + name + ", stream: " + str(stream))
 		stop()
 
 
-	func set_active(fadetime: float = 0, easing: Tween.EaseType = Tween.EASE_OUT, transition: Tween.TransitionType = Tween.TRANS_QUART):
+	func set_active(fadetime: float = 0, easing: Tween.EaseType = Tween.EASE_OUT, transition: Tween.TransitionType = Tween.TRANS_QUART) -> void:
 		#if debug: print("SET ACTIVE: %s (state: %s, fadetime: %s)" % [name, ds[state], fadetime])
 		if state == ss.inactive:
 			if debug: debugsphere.visible = true
@@ -836,7 +840,7 @@ class Soundplayer extends SpatialAudio3D:
 			state = ss.active
 
 
-	func set_inactive(fadetime: float = 0, easing: Tween.EaseType = Tween.EASE_IN, transition: Tween.TransitionType = Tween.TRANS_QUINT):
+	func set_inactive(fadetime: float = 0, easing: Tween.EaseType = Tween.EASE_IN, transition: Tween.TransitionType = Tween.TRANS_QUINT) -> void:
 		#if debug: print("SET INACTIVE: %s (state: %s, fadetime: %s)" % [name, ds[state], fadetime])
 		if state == ss.active or state == ss.fading_to_active:
 
@@ -850,17 +854,17 @@ class Soundplayer extends SpatialAudio3D:
 				fade_tween.set_ease(easing)
 				fade_tween.set_trans(transition)
 
-				set_audiobus_volume(audiobus_name, -80, fadetime, fade_tween)
+				set_audiobus_volume(audiobus_name, -80.0, fadetime, fade_tween)
 				await get_tree().create_timer(fadetime + 0.010).timeout
 
 			else:
-				set_audiobus_volume(audiobus_name, -80)
+				set_audiobus_volume(audiobus_name, -80.0)
 
 			state = ss.inactive
 			if debug: debugsphere.visible = false
 
 
-	func update_effect_params():
+	func update_effect_params() -> void:
 		# update distance vars
 		distance_to_soundsource = global_position.distance_to(soundsource.global_position)
 		distance_to_player = global_position.distance_to(player_camera.global_position)
@@ -889,40 +893,40 @@ class Soundplayer extends SpatialAudio3D:
 
 
 	# turn down reverb volume by [reduction] dB when closer to the wall
-	func calculate_proximity_volume():
-		var proximity_reduction = 24
-		var max_volume = reverb_volume_db + volume_db
+	func calculate_proximity_volume() -> float:
+		var proximity_reduction : float = 24.0
+		var max_volume : float = reverb_volume_db + volume_db
 
 		# calculate reduction based on the ratio player-to-max_raycast_distance and player-to-soundsource.
 		# the closer you are to a wall, the less reverb should be heard. the further away you are, the more it should be audible.
 		# the further away the soundsource is, the less reverb should be heard.
-		var ratio_player_rc = min(1, distance_to_player / max_raycast_distance)
-		var ratio_player_ss = min(1, distance_to_player / distance_to_soundsource)
-		var prox_volume = (proximity_reduction * ratio_player_rc + proximity_reduction * ratio_player_ss) / 2 - proximity_reduction
+		var ratio_player_rc : float = minf(1.0, distance_to_player / max_raycast_distance)
+		var ratio_player_ss : float = minf(1.0, distance_to_player / distance_to_soundsource)
+		var prox_volume : float = (proximity_reduction * ratio_player_rc + proximity_reduction * ratio_player_ss) / 2 - proximity_reduction
 
 		# add soundsource max_volume
 		prox_volume = prox_volume + max_volume
 
 		# limit maximum volume to max_volume
-		prox_volume = min(prox_volume, max_volume)
+		prox_volume = minf(prox_volume, max_volume)
 
 		return prox_volume
 
 
-	func calculate_proximity_bass():
-		return snappedf(min(0.2 * distance_to_player / max(bass_proximity, 0.001), 0.2), 0.001)
+	func calculate_proximity_bass() -> float:
+		return snappedf(minf(0.2 * distance_to_player / maxf(bass_proximity, 0.001), 0.2), 0.001)
 
 
-	func calculate_occlusion_lowpass():
-		var limited_distance_to_player = clamp(distance_to_player, 0, max_raycast_distance)
+	func calculate_occlusion_lowpass() -> float:
+		var limited_distance_to_player : float = clampf(distance_to_player, 0.0, max_raycast_distance)
 		occlusion_raycast.target_position = global_position.direction_to(player_camera.global_position) * max_raycast_distance * 10
 
-		var _cutoff = 20500
+		var _cutoff : float = 20500.0
 		occlusion_raycast.force_raycast_update()
 		if occlusion_raycast.is_colliding():
-			var collision_point = occlusion_raycast.get_collision_point()
-			var ray_distance = collision_point.distance_to(global_position)
-			var wall_to_player_ratio = ray_distance / max(distance_to_player, 0.001)
+			var collision_point : Vector3 = occlusion_raycast.get_collision_point()
+			var ray_distance : float = collision_point.distance_to(global_position)
+			var wall_to_player_ratio : float = ray_distance / maxf(distance_to_player, 0.001)
 			if ray_distance < distance_to_player:
 				_cutoff = snappedf(occlusion_lp_cutoff * wall_to_player_ratio, 0.001)
 
@@ -942,10 +946,10 @@ class Debugsphere extends Node3D:
 	var label_offset: Vector3
 
 
-	func _ready():
-		var meshinstance = MeshInstance3D.new()
-		var spheremesh = SphereMesh.new()
-		var mat = StandardMaterial3D.new()
+	func _ready() -> void:
+		var meshinstance : MeshInstance3D = MeshInstance3D.new()
+		var spheremesh : SphereMesh = SphereMesh.new()
+		var mat : StandardMaterial3D = StandardMaterial3D.new()
 		mat.albedo_color = color
 		#mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		#mat.fixed_size = true
@@ -960,15 +964,15 @@ class Debugsphere extends Node3D:
 		add_child(meshinstance)
 
 		# create second sphere without depth-test, displayed when occluded
-		var occluded_meshinstance = MeshInstance3D.new()
-		var occluded_spheremesh = SphereMesh.new()
-		var occluded_mat = StandardMaterial3D.new()
+		var occluded_meshinstance : MeshInstance3D = MeshInstance3D.new()
+		var occluded_spheremesh : SphereMesh = SphereMesh.new()
+		var occluded_mat : StandardMaterial3D = StandardMaterial3D.new()
 		occluded_mat.albedo_color = Color(color, 0.2)
 		#occluded_mat.fixed_size = true
 		occluded_mat.no_depth_test = true
 		occluded_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		occluded_spheremesh.material = occluded_mat
-		occluded_meshinstance.cast_shadow = false
+		occluded_meshinstance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		occluded_spheremesh.radius = size / 2
 		occluded_spheremesh.height = size
 		occluded_meshinstance.mesh = occluded_spheremesh
@@ -992,7 +996,7 @@ class Debugsphere extends Node3D:
 		add_child(label)
 
 
-	func update_label():
+	func update_label() -> void:
 		label.text = line1 + "\n" + line2 + "\n" + line3 + "\n" + line4
 
 
@@ -1002,7 +1006,7 @@ class Debugray extends MeshInstance3D:
 	var material: ORMMaterial3D
 
 
-	func _ready():
+	func _ready() -> void:
 		immediate_mesh = ImmediateMesh.new()
 		material = ORMMaterial3D.new()
 		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -1011,7 +1015,7 @@ class Debugray extends MeshInstance3D:
 		cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
-	func draw(pos1: Vector3, pos2: Vector3, color: Color):
+	func draw(pos1: Vector3, pos2: Vector3, color: Color) -> void:
 		clear()
 		immediate_mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
 		immediate_mesh.surface_add_vertex(pos1)
@@ -1021,22 +1025,22 @@ class Debugray extends MeshInstance3D:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 
 
-	func clear():
+	func clear() -> void:
 		immediate_mesh.clear_surfaces()
 
 
-func dump_debug():
-	var _s = ""
-	for key in _debug:
+func dump_debug() -> void:
+	var _s : String = ""
+	for key : String in _debug:
 		_s += "%s: %s\n" % [key, JSON.stringify(_debug[key], "    ")]
 
 	if _s != "":
-		var ad = get_tree().get_root().find_child("AudioDebug")
+		var ad : Node = get_tree().get_root().find_child("AudioDebug")
 		if ad:
 			ad.text = _s
 
 
-func print_r(obj):
+func print_r(obj : Variant) -> void:
 	if obj is Object:
 		obj = inst_to_dict(obj)
 	print(JSON.stringify(obj, "    "))
